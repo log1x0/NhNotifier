@@ -1,15 +1,20 @@
-# NhNotifier
-Windows notifications for nh
+## NhNotifier
+
+Windows notifications for nh.
 
 ### Installation
 
 Download the jar file from https://github.com/log1x0/NhNotifier/releases
 
-JRE >= Java 11 needed.
+You need >= Java 11. I recommend Java 17. (The Java path should be entered correctly in the system path.)
 
 ### Usage
 
-Run `java -jar NhNotifier.jar <u> <p>`
+Open CMD and then:
+
+`cd Downloads`
+
+`java -jar NhNotifier.jar <u> <p>`
 
 replace `<u>` and `<p>` with `uid` and `pass` found in your browser.
 
