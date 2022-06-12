@@ -30,7 +30,7 @@ public class Main {
             wc.getCookieManager().addCookie(new Cookie("newheaven.nl", "uid", args[0]));
             wc.getCookieManager().addCookie(new Cookie("newheaven.nl", "pass", args[1]));
             new Timer().schedule(new TimerTask() {
-                String[][] lastTable = new String[0][0];
+                String[][] lastTable = new String[1][3];
 
                 @Override
                 public void run() {
@@ -43,10 +43,11 @@ public class Main {
                         }
                         lastTable = table;
                     } catch (IOException e) {
-                        throw new RuntimeException(e);
+                        e.printStackTrace();
+                        System.exit(0);
                     }
                 }
-            }, 1000, 60 * 1000);
+            }, 1000, 30 * 1000);
         }
     }
 
@@ -54,24 +55,30 @@ public class Main {
         ArrayList<String[]> rows = new ArrayList<>();
         List<DomElement> tds = page.getElementsByTagName("td");
         for (int i = 0; i < tds.size() - 1; i++) {
-            DomElement td = tds.get(i);
-            if (td.hasAttribute("width") && td.hasAttribute("nowrap")) {
-                HtmlElement img = td.getElementsByTagName("img").get(0);
-                HtmlElement span = td.getElementsByTagName("span").get(0);
-                DomElement td2 = tds.get(i + 1);
-                rows.add(new String[]{
-                        img.getAttribute("title"),
-                        span.asNormalizedText(),
-                        td2.asNormalizedText().trim()
-                });
-                i++;
+            try {
+                DomElement td = tds.get(i);
+                if (td.hasAttribute("width") && td.hasAttribute("nowrap")) {
+                    HtmlElement img = td.getElementsByTagName("img").get(0);
+                    HtmlElement span = td.getElementsByTagName("span").get(0);
+                    DomElement td2 = tds.get(i + 1);
+                    rows.add(new String[]{
+                            img.getAttribute("title"),
+                            span.asNormalizedText(),
+                            td2.asNormalizedText().trim()
+                    });
+                    i++;
+                }
+            } catch (Exception ignore) {
             }
         }
-        String[][] r = new String[rows.size()][];
-        for (int i = 0; i < rows.size(); i++) {
-            r[i] = rows.get(i);
+        if (rows.size() > 0) {
+            String[][] r = new String[rows.size()][];
+            for (int i = 0; i < rows.size(); i++) {
+                r[i] = rows.get(i);
+            }
+            return r;
         }
-        return r;
+        return new String[1][3];
     }
 
     private static void showNotification(String[] row, TrayIcon trayIcon) {
