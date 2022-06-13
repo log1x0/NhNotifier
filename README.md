@@ -6,7 +6,10 @@ Windows notifications for nh.
 
 Download the jar file from https://github.com/log1x0/NhNotifier/releases
 
-You need Java >= 17. I recommend Java 17. (The Java path should be entered correctly in the system path.)
+You need Java >= 17. I recommend Java 17. (The Java path should be entered
+correctly in the system path.)
+
+Make sure, Java is working by entering `java -version`.
 
 ### Usage
 

@@ -19,7 +19,7 @@ public class Main {
 
     public Main(String uid, String pass) throws AWTException {
         wc = new WebClient(BrowserVersion.FIREFOX);
-        wc.getOptions().setThrowExceptionOnScriptError(false);
+        wc.getOptions().setJavaScriptEnabled(false);
         wc.getOptions().setCssEnabled(false);
         wc.getCookieManager().addCookie(new Cookie("newheaven.nl", "uid", uid));
         wc.getCookieManager().addCookie(new Cookie("newheaven.nl", "pass", pass));
@@ -41,6 +41,14 @@ public class Main {
 
         allItem.addActionListener(e -> lasts());
         exitItem.addActionListener(e -> System.exit(0));
+
+        try {
+            HtmlPage page = wc.getPage(sbUrl);
+            page.getAnchorByHref("index.php?strWebValue=extra&strWebAction=shoutbox&page=1");
+        } catch (Exception e) {
+            System.out.println("Please enter the correct uid and pass next time.");
+            System.exit(0);
+        }
 
         timer = new Timer();
         scheduleTimer();
