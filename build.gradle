@@ -16,6 +16,11 @@ dependencies {
     implementation group: 'net.sourceforge.htmlunit', name: 'htmlunit', version: '2.62.0'
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
 test {
     useJUnitPlatform()
 }
