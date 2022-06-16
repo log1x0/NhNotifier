@@ -4,11 +4,16 @@ import com.gargoylesoftware.htmlunit.html.DomElement;
 import com.gargoylesoftware.htmlunit.html.HtmlElement;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.gargoylesoftware.htmlunit.util.Cookie;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
+import org.apache.commons.csv.QuoteMode;
 
 import java.awt.*;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class Main {
     private final WebClient wc;
@@ -25,8 +30,10 @@ public class Main {
         wc.getCookieManager().addCookie(new Cookie("newheaven.nl", "pass", pass));
 
         final PopupMenu popupMenu = new PopupMenu();
+        final MenuItem csvItem = new MenuItem("Create csv file");
         final MenuItem allItem = new MenuItem("Show last 10");
         final MenuItem exitItem = new MenuItem("Exit");
+        popupMenu.add(csvItem);
         popupMenu.add(allItem);
         popupMenu.add(exitItem);
 
@@ -39,6 +46,7 @@ public class Main {
         final SystemTray tray = SystemTray.getSystemTray();
         tray.add(trayIcon);
 
+        csvItem.addActionListener(e -> csvFile());
         allItem.addActionListener(e -> lasts());
         exitItem.addActionListener(e -> System.exit(0));
 
@@ -52,6 +60,55 @@ public class Main {
 
         timer = new Timer();
         scheduleTimer();
+    }
+
+    private synchronized void csvFile() {
+        try (WebClient wc2 = new WebClient(BrowserVersion.FIREFOX)) {
+            wc2.getCookieManager().addCookie(wc.getCookieManager().getCookie("uid"));
+            wc2.getCookieManager().addCookie(wc.getCookieManager().getCookie("pass"));
+            wc2.getOptions().setJavaScriptEnabled(false);
+            wc2.getOptions().setCssEnabled(false);
+            HtmlPage page = wc2.getPage("https://newheaven.nl/index.php?strWebValue=torrent&strWebAction=list");
+            List<DomElement> as = page.getByXPath("//table/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td[2]/table/tbody/tr[2]/td/a").stream().map(o -> (DomElement) o).toList();
+            Pattern pat = Pattern.compile("'([^']+)'");
+            ArrayList<ItemCsv> rows = new ArrayList<>();
+            for (DomElement a : as) {
+                String name = a.asNormalizedText();
+                String mouse = a.getAttribute("onmouseover");
+                List<String> rs = pat.matcher(mouse).results().map(mr -> mr.group(1)).toList();
+                if (!rs.isEmpty()) {
+                    System.out.println("rs = " + rs);
+                    int comments = Integer.parseInt(rs.get(2));
+                    int seeder = Integer.parseInt(rs.get(3));
+                    int lecher = Integer.parseInt(rs.get(4));
+                    String size = rs.get(5);
+                    int snatched = Integer.parseInt(rs.get(6));
+                    String from = rs.get(7);
+                    String[] sizeSplit = size.split(" ");
+                    String first = sizeSplit[0].replace(",", "");
+                    double sizeNormal = switch (sizeSplit[1]) {
+                        case "MB" -> Double.parseDouble(first) * 1000;
+                        case "GB" -> Double.parseDouble(first) * 1000000;
+                        default -> Double.parseDouble(first);
+                    };
+                    rows.add(new ItemCsv(name, from, comments, seeder, lecher, snatched, sizeNormal));
+                }
+            }
+            double maxSeeder = rows.stream().map(ItemCsv::seeder).max(Integer::compare).orElse(-1);
+            double maxLecher = rows.stream().map(ItemCsv::lecher).max(Integer::compare).orElse(-1);
+            double maxSnatched = rows.stream().map(ItemCsv::snatched).max(Integer::compare).orElse(-1);
+            double maxSize = rows.stream().map(ItemCsv::sizeNormal).max(Double::compare).orElse(-1.0);
+            double maxIndex = rows.size() - 1;
+            try (CSVPrinter p = new CSVPrinter(new FileWriter("nh-" + System.currentTimeMillis() + ".csv.txt"), CSVFormat.Builder.create(CSVFormat.EXCEL).setQuoteMode(QuoteMode.ALL).setHeader("Index", "Name", "From", "Comments", "Seeder", "Lecher", "Snatched", "Size KB", "Score").build())) {
+                for (int i = 0; i < rows.size(); i++) {
+                    ItemCsv r = rows.get(i);
+                    double score = (r.seeder / maxSeeder + r.lecher / maxLecher + r.snatched / maxSnatched + r.sizeNormal / maxSize + i / maxIndex) / 5.0;
+                    p.printRecord(i + 1, r.name, r.from, r.comments, r.seeder, r.lecher, r.snatched, r.sizeNormal, score);
+                }
+            }
+        } catch (IOException ex) {
+            System.out.println(ex.getMessage());
+        }
     }
 
     private synchronized void lasts() {
@@ -120,6 +177,10 @@ public class Main {
     }
 
     public record Notification(String date, String user, String text) {
+    }
+
+    public record ItemCsv(String name, String from, int comments, int seeder, int lecher, int snatched,
+                          double sizeNormal) {
     }
 
     public static void main(String[] args) throws AWTException {
