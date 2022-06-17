@@ -99,11 +99,14 @@ public class Main {
             double maxSnatched = rows.stream().map(ItemCsv::snatched).max(Integer::compare).orElse(-1);
             double maxSize = rows.stream().map(ItemCsv::sizeNormal).max(Double::compare).orElse(-1.0);
             double maxIndex = rows.size() - 1;
-            try (CSVPrinter p = new CSVPrinter(new FileWriter("nh-" + System.currentTimeMillis() + ".csv.txt"), CSVFormat.Builder.create(CSVFormat.EXCEL).setQuoteMode(QuoteMode.ALL).setHeader("Index", "Name", "From", "Comments", "Seeder", "Lecher", "Snatched", "Size KB", "Score").build())) {
+            String[] headers = {
+                    "Index", "Name", "From", "Comments", "Seeder", "Lecher", "Snatched", "Size MB", "Score"
+            };
+            try (CSVPrinter p = new CSVPrinter(new FileWriter("nh-" + System.currentTimeMillis() + ".csv"), CSVFormat.Builder.create(CSVFormat.DEFAULT).setQuoteMode(QuoteMode.ALL).setHeader(headers).build())) {
                 for (int i = 0; i < rows.size(); i++) {
                     ItemCsv r = rows.get(i);
                     double score = (r.seeder / maxSeeder + r.lecher / maxLecher + r.snatched / maxSnatched + r.sizeNormal / maxSize + i / maxIndex) / 5.0;
-                    p.printRecord(i + 1, r.name, r.from, r.comments, r.seeder, r.lecher, r.snatched, r.sizeNormal, score);
+                    p.printRecord(i + 1, r.name, r.from, r.comments, r.seeder, r.lecher, r.snatched, (float) (r.sizeNormal / 1000.0), (float) score);
                 }
             }
         } catch (IOException ex) {
