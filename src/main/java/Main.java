@@ -9,6 +9,7 @@ import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.QuoteMode;
 
 import java.awt.*;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
@@ -82,10 +83,10 @@ public class Main {
             wc2.getOptions().setJavaScriptEnabled(false);
             wc2.getOptions().setCssEnabled(false);
             ArrayList<ItemCsv> rows = new ArrayList<>();
-            for (int pageNumber = 1; pageNumber <= pages; pageNumber++) {
+            for (int pageNumber = 0; pageNumber < pages; pageNumber++) {
                 String csvPrefix = "https://newheaven.nl/index.php?strWebValue=torrent&strWebAction=list&page=";
                 HtmlPage page = wc2.getPage(csvPrefix + pageNumber);
-                List<DomElement> as = page.getByXPath("//table/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td[2]/table/tbody/tr[2]/td/a").stream().map(o -> (DomElement) o).toList();
+                List<DomElement> as = page.getByXPath("//table/tbody/tr/td/a").stream().map(o -> (DomElement) o).toList();
                 Pattern pat = Pattern.compile("'([^']+)'");
                 for (DomElement a : as) {
                     String name = a.asNormalizedText();
@@ -100,11 +101,11 @@ public class Main {
                         int snatched = Integer.parseInt(rs.get(6));
                         String from = rs.get(7);
                         String[] sizeSplit = size.split(" ");
-                        String first = sizeSplit[0].replace(",", "");
+                        double sValue = Double.parseDouble(sizeSplit[0].replace(",", ""));
                         double sizeNormal = switch (sizeSplit[1]) {
-                            case "MB" -> Double.parseDouble(first) * 1000;
-                            case "GB" -> Double.parseDouble(first) * 1000000;
-                            default -> Double.parseDouble(first);
+                            case "MB" -> sValue * 1000;
+                            case "GB" -> sValue * 1000000;
+                            default -> sValue;
                         };
                         rows.add(new ItemCsv(name, from, comments, seeder, lecher, snatched, sizeNormal));
                     }
@@ -113,6 +114,7 @@ public class Main {
             double maxSeeder = rows.stream().map(ItemCsv::seeder).max(Integer::compare).orElse(-1);
             double maxLecher = rows.stream().map(ItemCsv::lecher).max(Integer::compare).orElse(-1);
             double maxSnatched = rows.stream().map(ItemCsv::snatched).max(Integer::compare).orElse(-1);
+            @SuppressWarnings("unused")
             double maxSize = rows.stream().map(ItemCsv::sizeNormal).max(Double::compare).orElse(-1.0);
             String[] headers = {
                     "Index", "Name", "From", "Comments", "Seeder", "Lecher", "Snatched", "Size MB", "Score"
@@ -120,7 +122,7 @@ public class Main {
             try (CSVPrinter p = new CSVPrinter(new FileWriter("nh-" + System.currentTimeMillis() + ".csv"), CSVFormat.Builder.create(CSVFormat.DEFAULT).setQuoteMode(QuoteMode.ALL).setHeader(headers).build())) {
                 for (int i = 0; i < rows.size(); i++) {
                     ItemCsv r = rows.get(i);
-                    double score = (r.seeder / maxSeeder + r.lecher / maxLecher + r.snatched / maxSnatched + r.sizeNormal / maxSize) / 4.0;
+                    double score = (r.seeder / maxSeeder + r.lecher / maxLecher + r.snatched / maxSnatched) / 3.0;
                     p.printRecord(i + 1, r.name, r.from, r.comments, r.seeder, r.lecher, r.snatched, (float) (r.sizeNormal / 1000.0), (float) score);
                 }
             }
@@ -151,6 +153,8 @@ public class Main {
                 runTimer();
             }
         }, 1000, 30 * 1000);
+        System.out.println("The application runs normally. Updates every 30 seconds. Have fun and enjoy the day.");
+        System.out.println("Csv files are stored in: " + new File("").getAbsolutePath());
     }
 
     private synchronized void runTimer() {
